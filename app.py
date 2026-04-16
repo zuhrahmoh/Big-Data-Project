@@ -9,7 +9,6 @@ Precompute files by running notebook 05_dashboard_data_prep.ipynb (writes under 
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
 import pandas as pd
@@ -56,7 +55,7 @@ def load_tables() -> dict[str, pd.DataFrame]:
         "clusters_scatter": "airport_clusters.csv",
     }
     for key, name in mapping.items():
-        p = ROOT / name
+        p = DATA / name
         if p.exists():
             out[key] = pd.read_csv(p)
         else:
@@ -84,11 +83,11 @@ def main() -> None:
             "dashboard_monthly_summary.csv",
             "dashboard_seasonal_summary.csv",
         )
-        if not (ROOT / n).exists()
+        if not (DATA / n).exists()
     ]
     if missing:
-        st.error("Missing dashboard data files: " + ", ".join(missing))
-        st.info("Run `05_dashboard_data_prep.ipynb` in this folder, then refresh.")
+        st.error("Missing files in `dashboard_data/`: " + ", ".join(missing))
+        st.info("Run `05_dashboard_data_prep.ipynb`, then refresh (files must live next to `app.py` under `dashboard_data/`).")
         st.stop()
 
     air = data["airport"]
@@ -129,14 +128,6 @@ def main() -> None:
         air_f = d_air
 
     total_flights = int(air_f["flights"].sum())
-    if air_f["pct_delayed"].notna().any():
-        pct_del = float((air_f["flights"] * air_f["pct_delayed"]).sum() / max(total_flights, 1))
-    else:
-        pct_del = float("nan")
-    if air_f["avg_arr_delay"].notna().any():
-        avg_del = float((air_f["flights"] * air_f["avg_arr_delay"]).sum() / max(total_flights, 1))
-    else:
-        avg_del = float("nan")
     totals = cause_totals_from_airline(air_f)
     dom_cause = totals.idxmax() if totals.sum() > 0 else None
     n_ap = int(ap_o["airport"].nunique()) if len(ap_o) else 0
@@ -144,19 +135,11 @@ def main() -> None:
 
     if page == "Overview":
         st.title("Overview")
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
+        c1, c2, c3, c4 = st.columns(4)
         c1.metric("Flights (filtered)", f"{total_flights:,}")
-        c2.metric(
-            "% arrival delayed",
-            f"{100 * pct_del:.1f}%" if not math.isnan(pct_del) else "N/A",
-        )
-        c3.metric(
-            "Avg arrival delay (min)",
-            f"{avg_del:.1f}" if not math.isnan(avg_del) else "N/A",
-        )
-        c4.metric("Dominant cause", CAUSE_LABELS.get(dom_cause, "—") if dom_cause else "—")
-        c5.metric("Origin airports", f"{n_ap:,}")
-        c6.metric("Clusters", f"{n_clu}")
+        c2.metric("Dominant cause", CAUSE_LABELS.get(dom_cause, "—") if dom_cause else "—")
+        c3.metric("Origin airports", f"{n_ap:,}")
+        c4.metric("Clusters", f"{n_clu}")
 
         left, right = st.columns(2)
         with left:
@@ -174,19 +157,19 @@ def main() -> None:
                 fig.update_layout(title="Attributed delay minutes (filtered slice)")
                 st.plotly_chart(fig, use_container_width=True)
         with right:
-            if len(d_month) and d_month["avg_arr_delay"].notna().any():
+            if len(d_month):
+                mplot = d_month.copy()
+                mplot["total_attributed_min"] = mplot[[f"total_{c}" for c in CAUSES]].sum(axis=1)
                 fig2 = px.line(
-                    d_month,
+                    mplot,
                     x="Month",
-                    y="avg_arr_delay",
+                    y="total_attributed_min",
                     markers=True,
-                    title="Avg arrival delay by month (network)",
+                    title="Total attributed delay minutes by month (network)",
                 )
                 if sel_month != "All":
                     fig2.add_vline(x=int(sel_month), line_dash="dash", line_color="gray")
                 st.plotly_chart(fig2, use_container_width=True)
-            elif len(d_month):
-                st.caption("Avg arrival delay by month is not in the dashboard export (add it in upstream notebooks if needed).")
 
         if len(d_sea):
             heat = d_sea.set_index("Season")[[f"total_{c}" for c in CAUSES]].T
@@ -231,18 +214,6 @@ def main() -> None:
                 color_continuous_scale="Blues",
             )
             st.plotly_chart(fig2, use_container_width=True)
-
-        if len(d_month) and d_month["pct_delayed"].notna().any():
-            fig3 = px.line(
-                d_month,
-                x="Month",
-                y="pct_delayed",
-                markers=True,
-                title="Share of flights arrival-delayed by month",
-            )
-            st.plotly_chart(fig3, use_container_width=True)
-        elif len(d_month):
-            st.caption("Monthly delay rate not in dashboard export.")
 
         st.subheader("Airline table (filtered)")
         st.dataframe(air_f.sort_values("flights", ascending=False), use_container_width=True)
@@ -316,8 +287,14 @@ def main() -> None:
         if len(d_cent):
             pivot = d_cent.pivot(index="metric", columns="cluster", values="value")
             fig2 = go.Figure()
-            for col in pivot.columns.astype(str):
-                fig2.add_trace(go.Bar(name=f"Cluster {col}", x=pivot.index.astype(str), y=pivot[col]))
+            for col in pivot.columns:
+                fig2.add_trace(
+                    go.Bar(
+                        name=f"Cluster {col}",
+                        x=pivot.index.astype(str),
+                        y=pivot[col],
+                    )
+                )
             fig2.update_layout(barmode="group", title="Centroid profiles (original units)", xaxis_tickangle=-30)
             st.plotly_chart(fig2, use_container_width=True)
 
