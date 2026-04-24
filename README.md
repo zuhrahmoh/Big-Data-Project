@@ -37,7 +37,7 @@ notebooks. The dashboard reads only from `processed_data/`.
 ## Environment
 
 - Python 3.10+
-- Jupyter Notebook (or VS Code / Cursor with the Jupyter extension)
+- Jupyter Notebook (or VS Code with the Jupyter extension)
 
 ### Python dependencies
 
