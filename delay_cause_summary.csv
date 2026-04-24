@@ -1,6 +1,6 @@
-cause,total_minutes,pct_of_all_cause_delay
-Carrier,3746825.0,29.45
-Weather,652085.0,5.13
-NAS,3413414.0,26.83
-Security,18825.0,0.15
-Late aircraft,4891681.0,38.45
+cause,delay_cause,total_delay_minutes,share_of_attributed_delay,rank
+,LateAircraftDelay,4891681.0,0.38448057546945136,1
+,CarrierDelay,3746825.0,0.2944961930639645,2
+,NASDelay,3413414.0,0.26829046682224,3
+,WeatherDelay,652085.0,0.05125314100715014,4
+,SecurityDelay,18825.0,0.001479623637193926,5
