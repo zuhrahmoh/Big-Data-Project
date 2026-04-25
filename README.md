@@ -47,15 +47,6 @@ Install everything with:
 pip install -r requirements.txt
 ```
 
-`requirements.txt` covers the dashboard and analysis stack
-(`streamlit`, `pandas`, `plotly`, `numpy`, `matplotlib`, `seaborn`).
-Notebook `04_airport_clustering.ipynb` additionally requires
-[`scikit-learn`](https://scikit-learn.org/) for `KMeans`, `PCA`,
-`StandardScaler` and `silhouette_score`:
-
-```bash
-pip install scikit-learn
-```
 
 ## Reproducing the results
 
